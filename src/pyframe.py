@@ -5,6 +5,8 @@ pygame.font.init()
 SPRITE_RECT = "rect"
 GLOBAL_WIN = False
 GLOBAL_FONT = pygame.font.SysFont("Arial", 30)
+BACKGROUND_COLOR = (0,0,0)
+PRIMARY_COLOR = (213,63,60)
 
 FPS = 60
 DELTA_TIME_DIVIDER = 100
@@ -66,7 +68,7 @@ def set_framerate(framerate) :
     FPS = framerate
     DELTA_TIME = CLOCK.tick(FPS)/DELTA_TIME_DIVIDER*TIME_SPEED
 
-def clear_screen(color = (0,0,0),window = False) :
+def clear_screen(color = BACKGROUND_COLOR,window = False) :
     global GLOBAL_WIN
     if window == False :
         if GLOBAL_WIN == False :
@@ -93,7 +95,7 @@ def events_loop() :
 def drawRect(window,x,y,w,h) :
     pygame.draw.rect(window,(255,0,0),(x,y,w,h))
 
-def render_text(window,x,y,text,color,centered = False,font = False,fontsize = 30) :
+def render_text(x,y,text,color = PRIMARY_COLOR,vertical_centering = False,horizontal_centering = False,font = False,fontsize = 30,window = GLOBAL_WIN) :
     global GLOBAL_FONT
     if font != False :
         if type(font) is str :
