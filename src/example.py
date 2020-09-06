@@ -5,7 +5,7 @@ import time
 pygame.init()
 pygame.font.init()
 
-WIN_WIDTH = 500
+WIN_WIDTH = 750
 WIN_HEIGHT = 500
 WIN_RUN = True
 
@@ -26,6 +26,17 @@ pygame.display.set_caption("PyFrame Exemple")
 # There's different method for each sprite.
 exampleSprite = pyframe.PyFrameRectSprite(WIN,50,50,50,50,centered_rendering = True)
 
+particule = pyframe.ParticleSystem(
+    x=250,
+    y=250,
+    number_of_particles=100,
+    start_velocity=1,
+    particle_radius=5,
+    gravity = 0,
+    air_resistance=1,
+    elasticity=1
+    )
+
 # pyframe.PyFrameSuperSprite.bind(key,direction,step) : Bind a key to a movement
 #     key = The key to move the sprite,
 #     direction = Direction of movement. Can be "up","down","right","left","stand".
@@ -45,8 +56,7 @@ exampleSprite.bind(key=119,direction="down",step=1) # 119 is the pygame S key
 # pyframe.PyFrameSuperSprite.move(direction,step) : Move a sprite in one direction
 #     direction =  Direction of movement. Can be "up","down","right","left","stand".
 #     step = Movement length
-exampleSprite.move(direction="right",step=50)
-
+# exampleSprite.move(direction="right",step=25)
 
 while WIN_RUN : # Mainloop
     pyframe.events_loop() # PyFrame function to handle binds and timings
@@ -63,6 +73,9 @@ while WIN_RUN : # Mainloop
     #     window = If you want to clear a specific window. By default, it clear the GLOBAL_WIN window
     pyframe.clear_screen()
 
+    particule.move()
+    particule.render()
+
     # render_text(x,y,text,color,vertical_centering,horizontal_centering,font,fontsize,window) : Render a text on a window
     #     x = The x position of the text
     #     y = The y position of the text
@@ -73,10 +86,10 @@ while WIN_RUN : # Mainloop
     #     font = A pygame.font font used to render the text. By default, it use the GLOBAL_FONT font
     #     fontsize = Font size if argument font is defined. If this argument is not present, it use the value 30
     #     window = Window to render the text. By default, the text is rendered on GLOBAL_WIN window
-    pyframe.render_text(10,10,str(round(pyframe.CLOCK.get_fps())),(0,255,0))
+    pyframe.render_text(10,10,str(round(pyframe.CLOCK.get_fps()))+" FPS",(0,255,0),window=WIN)
 
-    # pyframe.PyFrameSuperSprite.render() : Render a sprite on his window
-    exampleSprite.render()
+    # pyframe.PyFrameRectSprite.render() : Render a sprite on his window
+    # exampleSprite.render()
 
     # Update the pygame display
     pygame.display.flip()
