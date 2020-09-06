@@ -26,4 +26,10 @@ fps = 60
 pyframe.set_framerate(fps)
 ```
 
+> Handle binds
+For pyframe to handle binds, you need this instruction in your mainloop, who run every frame
+```
+pyframe.events_loop()
+```
+
 And that's it ! You can now use pyframe.
