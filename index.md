@@ -1,4 +1,4 @@
-# Pyframe
+# PyFrame
 A python project who simplify your usage of pygame
 
 # Init
