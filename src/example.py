@@ -1,7 +1,9 @@
 import pygame
 import pyframe
 import time
+import random
 
+# PyGame Init
 pygame.init()
 pygame.font.init()
 
@@ -15,10 +17,7 @@ pyframe.GLOBAL_WIN = WIN
 # Set the fps
 pyframe.set_framerate(60)
 
-pygame.display.set_caption("PyFrame Exemple")
-
-# Create a new Sprite
-
+pygame.display.set_caption("PyFrame Exemple") # Setting up the window title
 
 # Example sprite
 
@@ -26,16 +25,32 @@ pygame.display.set_caption("PyFrame Exemple")
 # There's different method for each sprite.
 exampleSprite = pyframe.PyFrameRectSprite(WIN,50,50,50,50,centered_rendering = True)
 
-particule = pyframe.ParticleSystem(
-    x=250,
-    y=250,
-    number_of_particles=100,
-    start_velocity=1,
-    particle_radius=5,
-    gravity = 0,
-    air_resistance=1,
-    elasticity=1
-    )
+# Create an hitbox in the middle of the
+# screen. Particle doesn't support hitbox
+# bounce for now
+middle_hitbox = pyframe.Hitbox(WIN_WIDTH/2-25,WIN_HEIGHT/2-25,50,50,centered_hitbox=True)
+
+bouton = pyframe.Button(20,20,"Hello !",width = 35,height = 35) # Create a button with text "Hello !"
+
+def return_new_particle_system() : # Return a brand new ParticleSystem
+    return pyframe.ParticleSystem(
+        x=random.randint(WIN_WIDTH-50,WIN_WIDTH+50)/2,
+        y=random.randint(WIN_HEIGHT-50,WIN_HEIGHT+50)/2,
+        number_of_particles=1000,
+        start_velocity=0.3,
+        particle_radius=5,
+        gravity = 0,
+        air_resistance=1,
+        elasticity=1,
+        random_values = True,
+        random_ceil = 100,
+        image_path = "\\images\\bubble.png",
+        lifetime = 5000
+        )
+
+particule = return_new_particle_system()
+
+myActivity = pyframe.Display([particule,bouton]) # Create an "Activity", like a screen, or a display
 
 # pyframe.PyFrameSuperSprite.bind(key,direction,step) : Bind a key to a movement
 #     key = The key to move the sprite,
@@ -57,8 +72,14 @@ exampleSprite.bind(key=119,direction="down",step=1) # 119 is the pygame S key
 #     direction =  Direction of movement. Can be "up","down","right","left","stand".
 #     step = Movement length
 # exampleSprite.move(direction="right",step=25)
-
 while WIN_RUN : # Mainloop
+
+    # clear_screen(color,window) : Fill the screen with a certain color.
+    #     color = A tuple to represent the color (e.g. : (255,0,0) for red). By default, it use the BACKGROUND_COLOR color
+    #     window = If you want to clear a specific window. By default, it clear the GLOBAL_WIN window
+    pyframe.clear_screen()
+
+
     pyframe.events_loop() # PyFrame function to handle binds and timings
     
     ####
@@ -68,13 +89,11 @@ while WIN_RUN : # Mainloop
     ####
 
 
-    # clear_screen(color,window) : Fill the screen with a certain color.
-    #     color = A tuple to represent the color (e.g. : (255,0,0) for red). By default, it use the BACKGROUND_COLOR color
-    #     window = If you want to clear a specific window. By default, it clear the GLOBAL_WIN window
-    pyframe.clear_screen()
+    #middle_hitbox.debug_render()
 
-    particule.move()
-    particule.render()
+    myActivity.render()
+    myActivity.move()
+
 
     # render_text(x,y,text,color,vertical_centering,horizontal_centering,font,fontsize,window) : Render a text on a window
     #     x = The x position of the text
