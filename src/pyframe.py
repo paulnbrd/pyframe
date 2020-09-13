@@ -9,6 +9,8 @@ LAST_MOUSE_POS = False
 LAST_KEYS_PRESSED = False
 LAST_MOUSE_STATES = False
 
+DEBUG = True
+
 FPS = 60 # Les FPS par défaut
 DELTA_TIME_DIVIDER = 1 # Constante, permet de changer la vitesse des objets
 CLOCK = pygame.time.Clock() # La clock pygame
@@ -121,7 +123,7 @@ def events_loop() :
 
     for bouton in BUTTONS :
         if bouton.command != False :
-            if bouton.is_clicked() :
+            if bouton.is_clicked() and bouton.rendered_last_frame :
                 bouton.command(bouton)
 
         bouton.rendered_last_frame = False
@@ -160,6 +162,14 @@ def render_text(x,y,text,color = PRIMARY_COLOR,vertical_centering = False,horizo
         window.blit(text,(x,y)) # Le coller dans la fenêtre
 
     return text
+
+def addVectors(v1, v2): # v[0] = Angle, v[1] = length
+    x = math.sin(v1[0]) * v1[1] + math.sin(v2[0]) * v2[1]
+    y = math.cos(v1[0]) * v1[1] + math.cos(v2[0]) * v2[1]
+
+    length = math.hypot(x, y)
+    angle = 0.5 * math.pi - math.atan2(y, x)
+    return (angle, length)
 
 #############################################
 ############# =<|= Classes =|>= #############
@@ -200,49 +210,43 @@ class Hitbox :
         else : # Sinon
             return True # Retourner Vrai !
 
-
-def addVectors(v1, v2): # v[0] = Angle, v[1] = length
-    x = math.sin(v1[0]) * v1[1] + math.sin(v2[0]) * v2[1]
-    y = math.cos(v1[0]) * v1[1] + math.cos(v2[0]) * v2[1]
-
-    length = math.hypot(x, y)
-    angle = 0.5 * math.pi - math.atan2(y, x)
-    return (angle, length)
-
 class Particle :
-    def __init__(self,x,y,start_velocity, radius = 2, gravity = 0.002,air_resistance = 0.999,elasticity = 0.750, colors = [[255,0,0],[100,0,0]] ,window = GLOBAL_WIN,random_values = False,random_ceil=0.01, image = False, lifetime = 0) :
-        self.x = x
-        self.base_x = x
-        self.y = y
-        self.base_y = y
-        self.window = window
-        self.gravity = gravity = (math.pi, gravity)
+    """
+        La classe de particule !
+    """
+    def __init__(self,x,y,start_velocity, radius = 2, gravity = 4,air_resistance = 0.999,elasticity = 0.750, colors = [[255,0,0],[100,0,0]] ,window = GLOBAL_WIN,random_values = False,random_ceil=0.01, image = False, lifetime = 0) :
+        self.x = x # La position x
+        self.base_x = x # La position x (save pour reset)
+        self.y = y # La position y
+        self.base_y = y # La position y (save pour reset)
+        self.gravity = gravity = (math.pi, gravity) # Le vecteur de gravité
 
-        self.random_values = random_values
-        self.random_ceil = random_ceil
+        self.random_values = random_values # Est-ce-que il y a des valeurs aléatoires
+        self.random_ceil = random_ceil # La limite d'intervalle de valeurs aléatoires
 
-        self.lifetime = lifetime
-        self.lifetime_elapsed = 0
+        self.lifetime = lifetime # La durée de vie
+        self.lifetime_elapsed = 0 # Le temps écoulé depuis sa création (si move() n'est pas appelé, ne bouge pas)
 
-        if image != False :
-            self.image = image
+        if image != False : # Si il y une image
+            self.image = image # Définir l'image
         else :
-            self.image = False
+            self.image = False # Sinon, pas d'image
 
-        self.air_resistance = air_resistance
-        self.elasticity = elasticity
+        self.air_resistance = air_resistance # La résistance à l'air
+        self.elasticity = elasticity # Le ralentissement quand tu touche un mur
 
-        if self.window == False :
+        if self.window == False : # La window de render
             self.window = GLOBAL_WIN
-        self.radius = radius
+        self.radius = radius # Le rayon de la particule
 
-        self.velocity = start_velocity
-        self.base_velocity = start_velocity
-        self.angle = random.uniform(0, math.pi*2)
-        self.base_angle = self.angle
+        self.velocity = start_velocity # La vélocité de départ
+        self.base_velocity = start_velocity # La vélocité de départ (save pour reset)
+        self.angle = random.uniform(0, math.pi*2) # Un angle aléatoire (en radians)
+        self.base_angle = self.angle # La save de l'angle
 
-        self.velocity_ceil = 0.15
+        self.velocity_ceil = 0.15 # Seuil de l'arrêt de la particule
 
+        # Couleur aléatoire
         if colors[0][0] > colors[1][0] :
             temp = colors[0][0]
             colors[0][0] = colors[1][0]
@@ -260,44 +264,42 @@ class Particle :
             random.randint(colors[0][1],colors[1][1]),
             random.randint(colors[0][2],colors[1][2])
         )
-    def reset(self) :
-        self.x = self.base_x
-        self.y = self.base_y
-        self.lifetime_elapsed = 0
-        self.velocity = self.base_velocity
-        self.angle = self.base_angle
-    def render(self) :
-        if self.image == False :
-            pygame.draw.circle(self.window,self.color,(int(self.x),int(self.y)),self.radius)
-        else :
-            self.window.blit(self.image,(self.x,self.y))
-    def move(self) :
-        if self.velocity != 0 :
-            (self.angle, self.velocity) = addVectors((self.angle, self.velocity), self.gravity)
-        self.x += math.sin(self.angle) * self.velocity * DELTA_TIME
-        self.y -= math.cos(self.angle) * self.velocity * DELTA_TIME
+    def reset(self) : # Reset de la particule, comme si elle venait de spawner
+        self.x = self.base_x # La position x
+        self.y = self.base_y # La position y
+        self.lifetime_elapsed = 0 # Temps en vie = 0
+        self.velocity = self.base_velocity # Vélocité de base
+        self.angle = self.base_angle # Angle de base
+    def render(self) : # La fonction de render
+        if self.image == False : # Si ce n'est pas une image
+            pygame.draw.circle(self.window,self.color,(int(self.x),int(self.y)),self.radius) # Dessiner un cercle (la particule)
+        else : # Si c'est une image
+            self.window.blit(self.image,(self.x,self.y)) # Blit l'image
+    def move(self) : # Fonction de mouvements
+        if self.velocity != 0 : # Si la vélocité n'est pas égale à 0
+            (self.angle, self.velocity) = addVectors((self.angle, self.velocity), (self.gravity[0],self.gravity[1]*DELTA_TIME/1000)) # Ajouter à la vélocité et l'angle la gravité
 
-        width, height = pygame.display.get_surface().get_size()
+        width, height = pygame.display.get_surface().get_size() # Prendre la taille de l'écran
         if self.x > width - self.radius:
-            self.x = 2 * (width - self.radius) - self.x
-            self.angle = - self.angle
+            self.x = 2 * (width - self.radius) - self.x # Faire rebondir
+            self.angle = - self.angle # Changer de direction
             self.velocity *= self.elasticity # Perte de vitesse quand ça touche un mur
-        elif self.x < self.radius:
+        elif self.x < self.radius: # Pareil
             self.x = 2 * self.radius - self.x
             self.angle = - self.angle
             self.velocity *= self.elasticity
-        if self.y > height - self.radius:
+        if self.y > height - self.radius: # Pareil
             self.y = 2 * (height - self.radius) - self.y
             self.angle = math.pi - self.angle
             self.velocity *= self.elasticity
             if self.velocity < self.velocity_ceil :
                 self.velocity = 0
-        elif self.y < self.radius:
+        elif self.y < self.radius: # Pareil
             self.y = 2 * self.radius - self.y
             self.angle = math.pi - self.angle
             self.velocity *= self.elasticity
 
-        for hitbox in HITBOXES :
+        for hitbox in HITBOXES : # Check si il y a une hitbox
             overlap = False
             if hitbox.x <= self.x+self.radius and hitbox.x+hitbox.width >= self.x+self.radius :
                 overlap = True
@@ -313,52 +315,62 @@ class Particle :
         if self.lifetime > 0 :
             self.lifetime_elapsed += ELAPSED # Augmenter la durée depuis l'initialisation
 
+        self.x += math.sin(self.angle) * self.velocity * DELTA_TIME # Changer la position de la particule
+        self.y -= math.cos(self.angle) * self.velocity * DELTA_TIME # Changer la position de la particule
+
 class ParticleSystem :
+    """
+        Voici un système de particules
+        qui permet de gérer plein de
+        particules en même temps !
+    """
     def __init__(self,x,y,number_of_particles,start_velocity,particle_radius = 10, gravity = 0.002,air_resistance = 0.999,elasticity = 0.750,colors = [[255,0,0],[200,0,0]],color = PRIMARY_COLOR,window = GLOBAL_WIN,random_values = False,random_ceil = 0.01,image_path = False,lifetime = 0) :
-        self.x = x
-        self.y = y
-        self.number_of_particles = number_of_particles
-        self.velocity = start_velocity
-        self.color = color
-        self.window = window
-        if self.window == False :
-            self.window = GLOBAL_WIN
-        self.particle_radius = particle_radius
-        self.gravity = gravity
-        self.air_resistance = air_resistance
-        self.elasticity = elasticity
+        self.x = x # Position x
+        self.y = y # Position y
+        self.number_of_particles = number_of_particles # Nombre de particules à générer
+        self.velocity = start_velocity # La vélocité des particule (cf. Particle())
+        self.color = color # La couleur des particules (Les deux bornes)
+        self.window = window # La fenêtre de rendu
+        if self.window == False : # Si pas de fenêtre
+            self.window = GLOBAL_WIN # Fenêtre de rendu = fenêtre globale
+        self.particle_radius = particle_radius # Rayon des particules
+        self.gravity = gravity # Gravité
+        self.air_resistance = air_resistance # Résistance à l'air
+        self.elasticity = elasticity # Ralentissement quand touche un mur
 
-        self.random_values = random_values
-        self.random_ceil = random_ceil
+        self.random_values = random_values # Des valeurs aléatoires ?
+        self.random_ceil = random_ceil # Seuil des valeurs aléatoires
 
-        self.lifetime = lifetime
+        self.lifetime = lifetime # Durée de vie
         
-        if image_path != False :
+        if image_path != False : # Si il y a une image
             try :
-                self.image = pygame.image.load(local_dir+image_path).convert_alpha()
-                self.image = pygame.transform.scale(self.image, (self.particle_radius*2, self.particle_radius*2))
-            except :
-                self.image = False
-                print("[pyframe][alert] Could not load image "+str(image_path)+". Using circle as placeholder")
+                self.image = pygame.image.load(local_dir+image_path).convert_alpha() # Charger l'image
+                self.image = pygame.transform.scale(self.image, (self.particle_radius*2, self.particle_radius*2)) # Redimmensionner à la taille des particules
+            except : # Si il y a une erreur
+                self.image = False # Définir pas d'image
+                if DEBUG :
+                    print("[pyframe][alert] Could not load image "+str(image_path)+". Using circle as placeholder")
         else :
-            self.image = False
+            self.image = False # Définir pas d'image
 
-        self.particles = []
-        for i in range(self.number_of_particles) :
+        self.particles = [] # Tableau des particules gérées
+        for i in range(self.number_of_particles) : # Pour toutes les particules
+            # Ajouter une particules avec ces attributs
             self.particles.append(Particle(self.x,self.y,self.velocity,radius = self.particle_radius,gravity = self.gravity,air_resistance = self.air_resistance,elasticity = self.elasticity,window = self.window,random_values = self.random_values,random_ceil=self.random_ceil,image = self.image,lifetime=self.lifetime))
-    def move(self): 
-        for particle in self.particles :
-            particle.move()
-            if particle.lifetime > 0 :
-                if particle.lifetime_elapsed >= particle.lifetime :
-                    self.particles.remove(particle)
-                    del particle
-    def render(self): 
-        for particle in self.particles :
-            particle.render()
-    def reset(self) :
-        for particle in self.particles :
-            particle.reset()
+    def move(self): # Déplacer
+        for particle in self.particles : # Pour toutes les particules
+            particle.move() # Move la particle
+            if particle.lifetime > 0 : # Si le temps de vie visé est > 0
+                if particle.lifetime_elapsed >= particle.lifetime : # Si le temps de vie est dépassé
+                    self.particles.remove(particle) # Supprimer la particule du tableau
+                    del particle # Supprimer l'objet
+    def render(self): # Render
+        for particle in self.particles : # Pour toutes les particules
+            particle.render() # Rendre la particule
+    def reset(self) : # Reset
+        for particle in self.particles : # Pour toutes les particules
+            particle.reset() # Reset la particule
 
 
 
@@ -368,28 +380,31 @@ class ParticleSystem :
 
 
 class Button :
+    """
+        Classe de bouton !
+    """
     def __init__(self,x,y,text,command = False,width = False, height = False,horizontal_centering = False,vertical_centering = False,background_color = (255,0,0),font = False,fontsize = 30,text_color = (0,255,0),background_image = False,image_scale_width = False,image_scale_height = False) :
         global BUTTONS
-        BUTTONS.append(self)
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        BUTTONS.append(self) # Ajouter à la liste des boutons soi-même
+        self.x = x # La position x
+        self.y = y # La position y
+        self.width = width # La longueur
+        self.height = height # La largeur
 
-        if self.width != False and type(self.width) is not int :
+        if self.width != False and type(self.width) is not int : # Si ce ne sont pas des int
             raise ArgumentError("width must be integer","width")
         if self.height != False and type(self.heigth) is not int :
             raise ArgumentError("height must be integer","height")
 
-        self.text = text
-        if background_image == False :
+        self.text = text # Le texte à afficher
+        if background_image == False : # Si il n'y a pas d'image de fond
             self.is_background_is_image = False
         else :
-            if os.path.isfile(background_image) :
-                self.is_background_is_image = True
-                self.background_image = pygame.image.load(background_image).convert_alpha()
+            if os.path.isfile(background_image) : # Si c'est une image qui existe
+                self.is_background_is_image = True # Alors c'est une image
+                self.background_image = pygame.image.load(background_image).convert_alpha() # Charger l'image
 
-        self.command = command
+        self.command = command # La commande a éxecuter en cas de clic
         self.horizontal_centering = horizontal_centering
         self.vertical_centering = vertical_centering
         self.background_color = background_color
@@ -419,13 +434,35 @@ class Button :
     def render(self) :
         global LAST_MOUSE_POS,GLOBAL_WIN
 
-
-        if self.width != False and self.height != False :
-            drawRect(GLOBAL_WIN,self.x,self.y,self.width,self.height,color=self.background_color)
-            GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y))
+        if self.horizontal_centering and self.vertical_centering :
+            if self.width != False and self.height != False :
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y-self.height/2,self.width,self.height,color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y-self.height/2))
+            else :
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y-self.height/2,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y-self.height/2))
+        elif self.vertical_centering and not self.horizontal_centering :
+            if self.width != False and self.height != False :
+                drawRect(GLOBAL_WIN,self.x,self.y-self.height/2,self.width,self.height,color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y-self.height/2))
+            else :
+                drawRect(GLOBAL_WIN,self.x,self.y-self.height/2,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y-self.height/2))
+        elif self.horizontal_centering and not self.vertical_centering :
+            if self.width != False and self.height != False :
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y,self.width,self.height,color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y))
+            else :
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y))
         else :
-            drawRect(GLOBAL_WIN,self.x,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
-            GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y))
+            if self.width != False and self.height != False :
+                drawRect(GLOBAL_WIN,self.x,self.y,self.width,self.height,color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y))
+            else :
+                drawRect(GLOBAL_WIN,self.x,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y))
+
 
         self.rendered_last_frame = True
 
@@ -435,9 +472,26 @@ class Button :
         if LAST_MOUSE_STATES[0] == 0 :
             self.pressed = False
 
-        if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
-            self.pressed = True
-            return True
+        if self.horizontal_centering and self.vertical_centering :
+            if self.x-self.width/2 <= LAST_MOUSE_POS[0] and self.x+self.width-self.width/2 >= LAST_MOUSE_POS[0] and self.y-self.height/2 <= LAST_MOUSE_POS[1] and self.y+self.height-self.height/2 >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                self.pressed = True
+                return True
+            return False
+        elif self.horizontal_centering and not self.vertical_centering :
+            if self.x-self.width/2 <= LAST_MOUSE_POS[0] and self.x+self.width-self.width/2 >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                self.pressed = True
+                return True
+            return False
+        elif self.vertical_centering and not self.horizontal_centering :
+            if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y-self.height/2 <= LAST_MOUSE_POS[1] and self.y+self.height-self.height/2 >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                self.pressed = True
+                return True
+            return False
+        else :
+            if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                self.pressed = True
+                return True
+            return False
         return False
 
 

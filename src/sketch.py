@@ -5,35 +5,46 @@ WIN_WIDTH = 750
 WIN_HEIGHT = 500
 WIN_RUN = True
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+RENDER_EACH_FRAME = []
 pyframe.GLOBAL_WIN = WIN
 pyframe.set_framerate(60)
 pygame.display.set_caption("PyFrame Exemple")
 
 
 # Définition des variables
-clicked = False
+menu = 1
 def new_particle() :
     return pyframe.ParticleSystem(
-    x = WIN_WIDTH/2,
-    y = WIN_HEIGHT/2,
+    x = pyframe.LAST_MOUSE_POS[0]-1,
+    y = pyframe.LAST_MOUSE_POS[1]-1,
     number_of_particles = 100,
     particle_radius=2,
-    start_velocity = 1,
-    gravity = 0.05,
+    start_velocity = 0.2,
+    gravity = 4,
     air_resistance = 0.999,
     elasticity = 0.750,
-    lifetime = 10000 # Temps de vie
+    lifetime = 50 # Temps de vie
     )
-particule = new_particle()
-
-def print_salut(bouton) :
-    global particule, clicked
-    clicked = True
-    my_screen.sprites.append(new_particle())
+def click_effect() :
+    global menu
+    if menu == 1 :
+        RENDER_EACH_FRAME.append(new_particle())
+    elif menu == 2 :
+        RENDER_EACH_FRAME.append(new_particle())
     return 0
-bouton = pyframe.Button(2,2,"Reset les particules",command = print_salut,background_color = (244,127,48),text_color=(255,255,255))
+def menu_2(bouton) :
+    global menu
+    click_effect()
+    menu = 2
+def menu_1(bouton) :
+    global menu
+    click_effect()
+    menu = 1
+bouton_du_menu_1 = pyframe.Button(WIN_WIDTH/2,WIN_HEIGHT/2-50,"Menu 2",command = menu_2,background_color = (244,127,48),text_color=(255,255,255),vertical_centering=True,horizontal_centering=True)
+bouton_du_menu_2 = pyframe.Button(WIN_WIDTH/2,WIN_HEIGHT/2+50,"Menu 1",command = menu_1,background_color = (248, 194, 145),text_color=(12, 36, 97),vertical_centering=True,horizontal_centering=True)
 
-my_screen = pyframe.Display([bouton,particule])
+menu_1_display = pyframe.Display([bouton_du_menu_1])
+menu_2_display = pyframe.Display([bouton_du_menu_2])
 
 #####
 
@@ -44,19 +55,20 @@ while WIN_RUN :
         if event.type == pygame.QUIT :
             WIN_RUN = False
 
-    bouton.is_clicked()
+    if menu == 1 :
+        menu_1_display.render()
+        menu_1_display.move()
+    elif menu == 2 :
+        menu_2_display.render()
+        menu_2_display.move()
 
-    my_screen.render()
-    if not clicked :
-        pyframe.render_text(2,50,"Clique sur le bouton au dessus")
-    my_screen.move()
-
-    for sprite in my_screen.sprites : # Retirer les systèmes de particules qui ne bougent plus
+    for sprite in RENDER_EACH_FRAME :
         if type(sprite) is pyframe.ParticleSystem :
-            if len(sprite.particles) == 0 :
-                my_screen.sprites.remove(sprite)
-                del sprite
+            sprite.render()
+            sprite.move()
 
+    text = pyframe.render_text(WIN_WIDTH,WIN_HEIGHT,str(menu) + "-" +str(round(pyframe.CLOCK.get_fps())),blit_to_window=False)
+    WIN.blit(text,(WIN_WIDTH-text.get_width(),WIN_HEIGHT-text.get_height()))
     pygame.display.flip()
 
 pygame.quit()
