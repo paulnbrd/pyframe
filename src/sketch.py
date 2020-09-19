@@ -1,4 +1,4 @@
-import pygame, pyframe, random, time
+import pygame, random, time, pyframe
 pygame.font.init()
 pygame.init()
 WIN_WIDTH = 750
@@ -20,7 +20,7 @@ def new_particle() :
     number_of_particles = 100,
     particle_radius=2,
     start_velocity = 0.2,
-    gravity = 4,
+    gravity = 0,
     air_resistance = 0.999,
     elasticity = 0.750,
     lifetime = 50 # Temps de vie

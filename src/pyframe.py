@@ -214,7 +214,7 @@ class Particle :
     """
         La classe de particule !
     """
-    def __init__(self,x,y,start_velocity, radius = 2, gravity = 4,air_resistance = 0.999,elasticity = 0.750, colors = [[255,0,0],[100,0,0]] ,window = GLOBAL_WIN,random_values = False,random_ceil=0.01, image = False, lifetime = 0) :
+    def __init__(self,x,y,start_velocity, radius = 2, gravity = 4,air_resistance = 0.999,elasticity = 0.750, colors = [[255,0,0],[100,0,0]] ,window = GLOBAL_WIN,random_values = False,random_ceil=0.01, image = False, lifetime = 0,stay_in_window = True) :
         self.x = x # La position x
         self.base_x = x # La position x (save pour reset)
         self.y = y # La position y
@@ -235,8 +235,10 @@ class Particle :
         self.air_resistance = air_resistance # La résistance à l'air
         self.elasticity = elasticity # Le ralentissement quand tu touche un mur
 
-        if self.window == False : # La window de render
+        if window == False : # La window de render
             self.window = GLOBAL_WIN
+        else :
+            self.window = window
         self.radius = radius # Le rayon de la particule
 
         self.velocity = start_velocity # La vélocité de départ
@@ -245,6 +247,7 @@ class Particle :
         self.base_angle = self.angle # La save de l'angle
 
         self.velocity_ceil = 0.15 # Seuil de l'arrêt de la particule
+        self.stay_in_window = stay_in_window # La particule ne peut pas partir de la fenêtre
 
         # Couleur aléatoire
         if colors[0][0] > colors[1][0] :
@@ -280,24 +283,25 @@ class Particle :
             (self.angle, self.velocity) = addVectors((self.angle, self.velocity), (self.gravity[0],self.gravity[1]*DELTA_TIME/1000)) # Ajouter à la vélocité et l'angle la gravité
 
         width, height = pygame.display.get_surface().get_size() # Prendre la taille de l'écran
-        if self.x > width - self.radius:
-            self.x = 2 * (width - self.radius) - self.x # Faire rebondir
-            self.angle = - self.angle # Changer de direction
-            self.velocity *= self.elasticity # Perte de vitesse quand ça touche un mur
-        elif self.x < self.radius: # Pareil
-            self.x = 2 * self.radius - self.x
-            self.angle = - self.angle
-            self.velocity *= self.elasticity
-        if self.y > height - self.radius: # Pareil
-            self.y = 2 * (height - self.radius) - self.y
-            self.angle = math.pi - self.angle
-            self.velocity *= self.elasticity
-            if self.velocity < self.velocity_ceil :
-                self.velocity = 0
-        elif self.y < self.radius: # Pareil
-            self.y = 2 * self.radius - self.y
-            self.angle = math.pi - self.angle
-            self.velocity *= self.elasticity
+        if self.stay_in_window :
+            if self.x > width - self.radius:
+                self.x = 2 * (width - self.radius) - self.x # Faire rebondir
+                self.angle = - self.angle # Changer de direction
+                self.velocity *= self.elasticity # Perte de vitesse quand ça touche un mur
+            elif self.x < self.radius: # Pareil
+                self.x = 2 * self.radius - self.x
+                self.angle = - self.angle
+                self.velocity *= self.elasticity
+            if self.y > height - self.radius: # Pareil
+                self.y = 2 * (height - self.radius) - self.y
+                self.angle = math.pi - self.angle
+                self.velocity *= self.elasticity
+                if self.velocity < self.velocity_ceil :
+                    self.velocity = 0
+            elif self.y < self.radius: # Pareil
+                self.y = 2 * self.radius - self.y
+                self.angle = math.pi - self.angle
+                self.velocity *= self.elasticity
 
         for hitbox in HITBOXES : # Check si il y a une hitbox
             overlap = False
@@ -324,7 +328,7 @@ class ParticleSystem :
         qui permet de gérer plein de
         particules en même temps !
     """
-    def __init__(self,x,y,number_of_particles,start_velocity,particle_radius = 10, gravity = 0.002,air_resistance = 0.999,elasticity = 0.750,colors = [[255,0,0],[200,0,0]],color = PRIMARY_COLOR,window = GLOBAL_WIN,random_values = False,random_ceil = 0.01,image_path = False,lifetime = 0) :
+    def __init__(self,x,y,number_of_particles,start_velocity,particle_radius = 10, gravity = 0.002,air_resistance = 0.999,elasticity = 0.750,colors = [[255,0,0],[200,0,0]],color = PRIMARY_COLOR,window = GLOBAL_WIN,random_values = False,random_ceil = 0.01,image_path = False,lifetime = 0,stay_in_window = True) :
         self.x = x # Position x
         self.y = y # Position y
         self.number_of_particles = number_of_particles # Nombre de particules à générer
@@ -342,6 +346,7 @@ class ParticleSystem :
         self.random_ceil = random_ceil # Seuil des valeurs aléatoires
 
         self.lifetime = lifetime # Durée de vie
+        self.stay_in_window  = stay_in_window # Les particules restent dans la fenêtre
         
         if image_path != False : # Si il y a une image
             try :
@@ -357,7 +362,7 @@ class ParticleSystem :
         self.particles = [] # Tableau des particules gérées
         for i in range(self.number_of_particles) : # Pour toutes les particules
             # Ajouter une particules avec ces attributs
-            self.particles.append(Particle(self.x,self.y,self.velocity,radius = self.particle_radius,gravity = self.gravity,air_resistance = self.air_resistance,elasticity = self.elasticity,window = self.window,random_values = self.random_values,random_ceil=self.random_ceil,image = self.image,lifetime=self.lifetime))
+            self.particles.append(Particle(self.x,self.y,self.velocity,radius = self.particle_radius,gravity = self.gravity,air_resistance = self.air_resistance,elasticity = self.elasticity,window = self.window,random_values = self.random_values,random_ceil=self.random_ceil,image = self.image,lifetime=self.lifetime,stay_in_window=self.stay_in_window))
     def move(self): # Déplacer
         for particle in self.particles : # Pour toutes les particules
             particle.move() # Move la particle
@@ -383,7 +388,7 @@ class Button :
     """
         Classe de bouton !
     """
-    def __init__(self,x,y,text,command = False,width = False, height = False,horizontal_centering = False,vertical_centering = False,background_color = (255,0,0),font = False,fontsize = 30,text_color = (0,255,0),background_image = False,image_scale_width = False,image_scale_height = False) :
+    def __init__(self,x,y,text,command = False,width = False, height = False,horizontal_centering = False,vertical_centering = False,background_color = (255,0,0),background_hover_color = (0,255,0),font = False,fontsize = 30,text_color = (0,255,0),background_image = False,image_scale_width = False,image_scale_height = False) :
         global BUTTONS
         BUTTONS.append(self) # Ajouter à la liste des boutons soi-même
         self.x = x # La position x
@@ -405,18 +410,20 @@ class Button :
                 self.background_image = pygame.image.load(background_image).convert_alpha() # Charger l'image
 
         self.command = command # La commande a éxecuter en cas de clic
-        self.horizontal_centering = horizontal_centering
-        self.vertical_centering = vertical_centering
-        self.background_color = background_color
-        self.text_color = text_color
-        self.background_image = background_image
-        self.image_scale_width = image_scale_width
-        self.image_scale_height = image_scale_height
-        self.font = font
-        self.fontsize = fontsize
+        self.horizontal_centering = horizontal_centering # Aligner horizontalement
+        self.vertical_centering = vertical_centering # Aligner verticalement
+        self.background_color = background_color # Couleur de fond
+        self.background_hover_color = background_hover_color # Couleur de fond lorsque la souris passe au dessus
+        self.text_color = text_color # Couleur du texte
+        self.background_image = background_image # Image d'arrière plan
+        self.image_scale_width = image_scale_width # Redimmensionner l'image ?
+        self.image_scale_height = image_scale_height # Redimmensionner l'image ?
+        self.font = font # Police d'écriture
+        self.fontsize = fontsize # Taille de police
 
-        self.pressed = True
-        self.rendered_last_frame = False
+        self.pressed = False # En train d'être pressé ?
+        self.hovered = False # En train d'être survolé par la souris ?
+        self.rendered_last_frame = False # Rendu la dernière frame ?
 
         if self.width != False and self.height != False :
             if self.font != False :
@@ -434,33 +441,37 @@ class Button :
     def render(self) :
         global LAST_MOUSE_POS,GLOBAL_WIN
 
+        used_color = self.background_color
+        if self.hovered :
+            used_color = self.background_hover_color
+
         if self.horizontal_centering and self.vertical_centering :
             if self.width != False and self.height != False :
-                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y-self.height/2,self.width,self.height,color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y-self.height/2,self.width,self.height,color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y-self.height/2))
             else :
-                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y-self.height/2,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y-self.height/2,self.text_rendered.get_width(),self.text_rendered.get_height(),color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y-self.height/2))
         elif self.vertical_centering and not self.horizontal_centering :
             if self.width != False and self.height != False :
-                drawRect(GLOBAL_WIN,self.x,self.y-self.height/2,self.width,self.height,color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x,self.y-self.height/2,self.width,self.height,color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y-self.height/2))
             else :
-                drawRect(GLOBAL_WIN,self.x,self.y-self.height/2,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x,self.y-self.height/2,self.text_rendered.get_width(),self.text_rendered.get_height(),color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y-self.height/2))
         elif self.horizontal_centering and not self.vertical_centering :
             if self.width != False and self.height != False :
-                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y,self.width,self.height,color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y,self.width,self.height,color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y))
             else :
-                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x-self.width/2,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x-self.width/2,self.y))
         else :
             if self.width != False and self.height != False :
-                drawRect(GLOBAL_WIN,self.x,self.y,self.width,self.height,color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x,self.y,self.width,self.height,color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y))
             else :
-                drawRect(GLOBAL_WIN,self.x,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=self.background_color)
+                drawRect(GLOBAL_WIN,self.x,self.y,self.text_rendered.get_width(),self.text_rendered.get_height(),color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered,(self.x,self.y))
 
 
@@ -473,24 +484,40 @@ class Button :
             self.pressed = False
 
         if self.horizontal_centering and self.vertical_centering :
-            if self.x-self.width/2 <= LAST_MOUSE_POS[0] and self.x+self.width-self.width/2 >= LAST_MOUSE_POS[0] and self.y-self.height/2 <= LAST_MOUSE_POS[1] and self.y+self.height-self.height/2 >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
-                self.pressed = True
-                return True
+            if self.x-self.width/2 <= LAST_MOUSE_POS[0] and self.x+self.width-self.width/2 >= LAST_MOUSE_POS[0] and self.y-self.height/2 <= LAST_MOUSE_POS[1] and self.y+self.height-self.height/2 >= LAST_MOUSE_POS[1] :
+                self.hovered = True
+                if LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                    self.pressed = True
+                    return True
+            else :
+                self.hovered = False
             return False
         elif self.horizontal_centering and not self.vertical_centering :
-            if self.x-self.width/2 <= LAST_MOUSE_POS[0] and self.x+self.width-self.width/2 >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
-                self.pressed = True
+            if self.x-self.width/2 <= LAST_MOUSE_POS[0] and self.x+self.width-self.width/2 >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] :
+                self.hovered = True
+                if LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                    self.pressed = True
                 return True
+            else :
+                self.hovered = False
             return False
         elif self.vertical_centering and not self.horizontal_centering :
-            if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y-self.height/2 <= LAST_MOUSE_POS[1] and self.y+self.height-self.height/2 >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
-                self.pressed = True
+            if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y-self.height/2 <= LAST_MOUSE_POS[1] and self.y+self.height-self.height/2 >= LAST_MOUSE_POS[1] :
+                self.hovered = True
+                if LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                    self.pressed = True
                 return True
+            else :
+                self.hovered = False
             return False
         else :
-            if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] and LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
-                self.pressed = True
+            if self.x <= LAST_MOUSE_POS[0] and self.x+self.width >= LAST_MOUSE_POS[0] and self.y <= LAST_MOUSE_POS[1] and self.y+self.height >= LAST_MOUSE_POS[1] :
+                self.hovered = True
+                if LAST_MOUSE_STATES[0] == 1 and self.pressed == False :
+                    self.pressed = True
                 return True
+            else :
+                self.hovered = False
             return False
         return False
 

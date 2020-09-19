@@ -1,5 +1,5 @@
 import pygame
-import pyframe
+from scripts import pyframe
 import time
 import random
 
