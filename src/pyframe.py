@@ -171,6 +171,14 @@ def addVectors(v1, v2): # v[0] = Angle, v[1] = length
     angle = 0.5 * math.pi - math.atan2(y, x)
     return (angle, length)
 
+def verify_arg_type(var,varname,type,auto_raise = True) :
+    if type(var) is type :
+        return True
+    else :
+        if auto_raise :
+            raise ArgumentError(varname,"Invalid var type")
+        return False
+
 #############################################
 ############# =<|= Classes =|>= #############
 #############################################
@@ -522,27 +530,46 @@ class Button :
         return False
 
 
-class ProgressBar :
-    def __init__(self,x,y,width,height,value=0,maximum=200,background_color = BACKGROUND_COLOR,color=PRIMARY_COLOR,window = False) :
-        self.x = x;self.y = y
-        self.width = width; self.height = height
-        self.maximum = maximum
-        self.value = value
-        self.background_color = background_color
-        self.color = color
+class ProgressBar:
+    """
+        Une classe de barre de progression :-)
+    """
+    def recompute_percentage(self): # Recalculer le pourcentage
+        self.percent = self.value / self.maximum * 100 # Redéfinition du pourcentage
+        return self.percent # Retourner la nouvelle valeur (en général, pas utile)
 
-        if window == False :
-            self.window = GLOBAL_WIN
-        else :
-            self.window = window
-    def render(self) :
-        if self.value > self.maximum and DEBUG :
-            print("[pyframe][alert] Maximum value of progress bar exceeded")
+    def __init__(self, value, maximum, padding = 0 ,progress_color=PRIMARY_COLOR, background_color=BACKGROUND_COLOR,
+                 window=GLOBAL_WIN):
+        """
+            value (int) = Valeur de base
+            maximum (int) = Valeur maximum de la barre
+            padding (int) = Espace en px entre le bord de la barre de progression et la progression en elle-même, valeur par défaut à 0
+            progress_bar (tuple) = Valeur rgb de couleur de la progression en elle-même, valeur par défaut à la valeur de la globale PRIMARY_COLOR,
+                PRIMARY_COLOR pouvant être changé, la couleur restera la même que la valeur de PRIMARY_COLOR à l'initialisation de la barre de
+                progression
+            background_color (tuple) = Valeur rgb de couleur de la barre de progression, valeur par défaut à la valeur de la globale BACKGROUND_COLOR,
+                BACKGROUND_COLOR pouvant être changé, la couleur restera la même que la valeur de BACKGROUND_COLOR à l'initialisation de la barre de
+                progression
+            window (pygame.Surface) = Fenêtre de rendu de la barre de progression, valeur par défaut à la valeur de la globale GLOBAL_WIN,
+                GLOBAL_WIN pouvant être changé, la fenêtre de rendu restera la même que la valeur de GLOBAL_WIN à l'initialisation de la barre de
+                progression
+        """
 
-        drawRect(self.window,self.x,self.y,self.width,self.height,color=self.background_color)
-        progress = self.value/self.maximum*100
-        progress = progress*self.width/100
-        drawRect(self.window,self.x,self.y,self.value,self.height,color=self.color)
+        self.value = value; verify_arg_type(self.value,"value",int)
+        self.maximum = maximum; verify_arg_type(self.maximum,"maximum",int)
+        self.recompute_percentage(); verify_arg_type(self.percent,"percent",int)
+        self.recompute_percentage_on_render = True
+        self.window = window; verify_arg_type(self.window,"window",pygame.Surface)
+        self.background_color = background_color; verify_arg_type(self.background_color,"background_color",tuple)
+        self.progress_color = progress_color; verify_arg_type(self.progress_color,"progress_color",tuple)
+        self.padding = padding; verify_arg_type(self.padding,"padding",int)
+
+    def render(self):
+        if self.recompute_percentage_on_render:
+            self.recompute_percentage()
+        drawRect(self.window, self.x, self.y, self.width+self.padding*2, self.height+self.padding*2, self.background_color)
+        size = self.width/100*self.percent
+        drawRect(self.window, self.x+self.padding, self.y+self.padding, size, self.height, self.progress_color)
 
 #############################################
 ############# =<|= Display =|>= #############
