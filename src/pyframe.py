@@ -522,6 +522,28 @@ class Button :
         return False
 
 
+class ProgressBar :
+    def __init__(self,x,y,width,height,value=0,maximum=200,background_color = BACKGROUND_COLOR,color=PRIMARY_COLOR,window = False) :
+        self.x = x;self.y = y
+        self.width = width; self.height = height
+        self.maximum = maximum
+        self.value = value
+        self.background_color = background_color
+        self.color = color
+
+        if window == False :
+            self.window = GLOBAL_WIN
+        else :
+            self.window = window
+    def render(self) :
+        if self.value > self.maximum and DEBUG :
+            print("[pyframe][alert] Maximum value of progress bar exceeded")
+
+        drawRect(self.window,self.x,self.y,self.width,self.height,color=self.background_color)
+        progress = self.value/self.maximum*100
+        progress = progress*self.width/100
+        drawRect(self.window,self.x,self.y,self.value,self.height,color=self.color)
+
 #############################################
 ############# =<|= Display =|>= #############
 #############################################
