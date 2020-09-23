@@ -1,5 +1,5 @@
 import pygame
-from scripts import pyframe
+import pyframe
 import time
 import random
 
@@ -15,7 +15,7 @@ WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 # Init the pyframe generic window
 pyframe.base.GLOBAL_WIN = WIN
 # Set the fps
-pyframe.base.set_framerate(60)
+pyframe.utils.set_framerate(60)
 
 pygame.display.set_caption("PyFrame Exemple") # Setting up the window title
 
@@ -60,8 +60,8 @@ myActivity = pyframe.base.Display([particule,bouton]) # Create an "Activity", li
 # pyframe.base.key_to_index(key) : return the index of a certain key
 # (AZERTY, see https://www.pygame.org/docs/ref/key.html#key-constants-label for all the keys and QWERTY characters)
 #     key = The key. Can be any letter. Specials characters not implemented yet
-exampleSprite.bind(key=pyframe.base.key_to_index("d"),direction="right",step=1) # 100 is the pygame D key
-exampleSprite.bind(key=pyframe.base.key_to_index("q"),direction="left",step=1) # 97 is the pygame Q key
+exampleSprite.bind(key=pyframe.utils.key_to_index("d"),direction="right",step=1) # 100 is the pygame D key
+exampleSprite.bind(key=pyframe.utils.key_to_index("q"),direction="left",step=1) # 97 is the pygame Q key
 
 # key argument can also be the index directly
 exampleSprite.bind(key=115,direction="up",step=1) # 115 is the pygame Z key
@@ -73,12 +73,11 @@ exampleSprite.bind(key=119,direction="down",step=1) # 119 is the pygame S key
 #     step = Movement length
 # exampleSprite.move(direction="right",step=25)
 while WIN_RUN : # Mainloop
-
-    pyframe.base.events_loop() # PyFrame function to handle binds and timings
     # clear_screen(color,window) : Fill the screen with a certain color.
     #     color = A tuple to represent the color (e.g. : (255,0,0) for red). By default, it use the BACKGROUND_COLOR color
     #     window = If you want to clear a specific window. By default, it clear the GLOBAL_WIN window
-    pyframe.base.clear_screen()
+    pyframe.utils.clear_screen()
+    pyframe.utils.events_loop() # PyFrame function to handle binds and timings
 
     ####
     for event in pygame.event.get():
@@ -103,7 +102,7 @@ while WIN_RUN : # Mainloop
     #     font = A pygame.font font used to render the text. By default, it use the GLOBAL_FONT font
     #     fontsize = Font size if argument font is defined. If this argument is not present, it use the value 30
     #     window = Window to render the text. By default, the text is rendered on GLOBAL_WIN window
-    pyframe.base.render_text(10,10,str(round(pyframe.base.CLOCK.get_fps()))+" FPS",(0,255,0),window=WIN)
+    pyframe.utils.render_text(10,10,str(round(pyframe.base.CLOCK.get_fps()))+" FPS",(0,255,0),window=WIN)
 
     # pyframe.base.PyFrameRectSprite.render() : Render a sprite on his window
     # exampleSprite.render()

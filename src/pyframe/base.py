@@ -1,4 +1,4 @@
-import os, pygame, random, sys, math
+import os, pygame, random, sys, math, pyframe
 
 pygame.font.init()  # Initialiser les polices d'écritures
 GLOBAL_WIN = False  # La fenetre de rendu par défaut
@@ -59,137 +59,6 @@ AZERTY_KEY_INDEXES = {
 local_dir = os.path.dirname(__file__)  # Le chemin vers le script éxecuté
 
 
-# Handling exceptions
-class Error(Exception):  # La classe d'erreur de base
-    pass
-
-
-class WindowError(Error):  # Erreur de fenêtre
-    def __init__(self, message):
-        self.message = message
-
-
-class ArgumentError(Error):  # Erreur d'argument
-    def __init__(self, message, subject):
-        self.message = message
-        self.subject = subject
-
-
-#############################################
-############ =<|= Functions =|>= ############
-#############################################
-
-def set_framerate(framerate):  # Définit les fps
-    global FPS, DELTA_TIME
-    FPS = framerate  # Redéfinit la globale FPS
-
-
-def clear_screen(color=BACKGROUND_COLOR, window=False):  # "Efface" l'écran
-    global GLOBAL_WIN
-    if window == False:  # Si l'argument window est laissé de base (pas de fenêtre fournie)
-        if GLOBAL_WIN == False:  # Si la fenêtre globale n'est pas définie
-            raise ArgumentError("GLOBAL_WIN is not defined", "GLOBAL_WIN")  # Raise une erreur d'argument
-        else:
-            GLOBAL_WIN.fill(color)  # Remplir l'écran de la couleur désirée
-    else:
-        window.fill((0, 0, 0))  # Remplir l'écran de noir, faute de mieux
-
-
-def key_to_index(key):
-    """ Permet de transformer un caractère en son index pygame (le clavier AZERTY n'est pas celui utilisé par pygame) """
-    return AZERTY_KEY_INDEXES.get(key)
-
-
-def events_loop():
-    global DELTA_TIME, ELAPSED, LAST_KEYS_PRESSED, LAST_MOUSE_POS, LAST_MOUSE_STATES, BUTTONS
-    """
-        Voici la boucle d'évenements qui doit être appellée
-        à chaque itération de la mainloop de pygame
-        à chaque frame quoi. Après un clear de l'écran,
-        car des render peuvent y être fait
-    """
-    ELAPSED = CLOCK.tick(FPS)
-    DELTA_TIME = ELAPSED / DELTA_TIME_DIVIDER * TIME_SPEED  # Le calcul du delta time
-    keys = pygame.key.get_pressed()  # Récupérer les touches appuyés
-    mouse_pos_x, mouse_pos_y = pygame.mouse.get_pos()
-    mouse_pressed = pygame.mouse.get_pressed()
-    LAST_MOUSE_POS = (mouse_pos_x, mouse_pos_y)
-    LAST_KEYS_PRESSED = keys
-    LAST_MOUSE_STATES = mouse_pressed
-
-    for bind in MOVE_BINDS:  # Pour tous les binds
-        if keys[bind.get("key")]:  # Si la touche du bind est appuyée
-            bind.get("obj").move(bind.get("direction"), bind.get("step"))  # Déplacer l'objet
-
-    for emitter in PARTICLES_EMITTERS:
-        emitter.particle_system.move()
-        emitter.particle_system.render()
-
-    for bouton in BUTTONS:
-        if bouton.command != False:
-            if bouton.is_clicked() and bouton.rendered_last_frame:
-                bouton.command(bouton)
-
-        bouton.rendered_last_frame = False
-
-
-def drawRect(window, x, y, w, h, color=PRIMARY_COLOR):  # Dessiner un rectangle
-    pygame.draw.rect(window, color, (x, y, w, h))  # La fonction de pygame
-
-
-def render_text(x, y, text, color=PRIMARY_COLOR, vertical_centering=False, horizontal_centering=False, font=False,
-                fontsize=30, window=False, scale=False, width=False, height=False, blit_to_window=True):
-    # Écrit du texte sur la fenêtre
-    global GLOBAL_FONT, GLOBAL_WIN
-    if font != False:  # Si la police d'écriture n'est pas définie
-        if type(font) is str:  # Si la police d'écriture est une chaîne de caractères
-            font = pygame.font.SysFont(font, int(fontsize))  # Définir la police d'écriture
-        else:  # Sinon
-            raise ArgumentError("Invalid font argument", "font")  # Lever une erreur d'argument
-
-    else:  # Sinon
-        font = GLOBAL_FONT  # La police d'écriture est égale à la police d'écriture globale
-
-    if window != False:  # Si l'argument window est changé de la valeur de base
-        if type(
-                window) is pygame.Surface:  # Si la window est un pygame.Surface (Une surface pygame,qui est probablement une fenêtre)
-            window = window  # Ne rien changer
-        else:
-            raise ArgumentError("Invalid window argument", "window")  # Lever une erreur d'argument
-    else:  # Sinon
-        window = GLOBAL_WIN  # La fenêtre de rendue est définie à la fenêtre globale
-    text = font.render(text, False, color)  # Rendre le texte
-
-    if scale:
-        if width != False and height != False:
-            text = pygame.transform.scale(text, (width, height))
-        else:
-            raise ArgumentError("Scale need width and height arguments", "width,height")
-
-    if blit_to_window:
-        window.blit(text, (x, y))  # Le coller dans la fenêtre
-
-    return text
-
-
-def addVectors(v1, v2):  # v[0] = Angle, v[1] = length
-    x = math.sin(v1[0]) * v1[1] + math.sin(v2[0]) * v2[1]
-    y = math.cos(v1[0]) * v1[1] + math.cos(v2[0]) * v2[1]
-
-    length = math.hypot(x, y)
-    angle = 0.5 * math.pi - math.atan2(y, x)
-    return (angle, length)
-
-
-def verify_arg_type(var, varname, type, auto_raise=True):
-    if type(var) is type:
-        return True
-    else:
-        if auto_raise:
-            raise ArgumentError(varname, "Invalid var type")
-        return False
-
-
 #############################################
 ############# =<|= Classes =|>= #############
 #############################################
@@ -220,7 +89,8 @@ class Hitbox:
 
     def debug_render(self, color=(0, 0, 255)):  # Faire un rendu dans self.window pour le débug
         # Dessiner un rectangle à la position de la hitbox
-        drawRect(self.window, self.x - self.width / 2, self.y - self.height / 2, self.width, self.height, color)
+        pyframe.utils.drawRect(self.window, self.x - self.width / 2, self.y - self.height / 2, self.width, self.height,
+                               color)
 
     def do_hitboxes_overlap(self, hitbox):  # Est-ce que cette boîte de collision en chevauche une autre ?
         if self.x > hitbox.x + hitbox.width or hitbox.x > self.x + self.width:  # Si une est à gauche de l'autre
@@ -308,8 +178,8 @@ class Particle:
 
     def move(self):  # Fonction de mouvements
         if self.velocity != 0:  # Si la vélocité n'est pas égale à 0
-            (self.angle, self.velocity) = addVectors((self.angle, self.velocity), (
-            self.gravity[0], self.gravity[1] * DELTA_TIME / 1000))  # Ajouter à la vélocité et l'angle la gravité
+            (self.angle, self.velocity) = pyframe.utils.addVectors((self.angle, self.velocity), (
+                self.gravity[0], self.gravity[1] * DELTA_TIME / 1000))  # Ajouter à la vélocité et l'angle la gravité
 
         width, height = pygame.display.get_surface().get_size()  # Prendre la taille de l'écran
         if self.stay_in_window:
@@ -385,7 +255,7 @@ class ParticleSystem:
             try:
                 self.image = pygame.image.load(local_dir + image_path).convert_alpha()  # Charger l'image
                 self.image = pygame.transform.scale(self.image, (
-                self.particle_radius * 2, self.particle_radius * 2))  # Redimmensionner à la taille des particules
+                    self.particle_radius * 2, self.particle_radius * 2))  # Redimmensionner à la taille des particules
             except:  # Si il y a une erreur
                 self.image = False  # Définir pas d'image
                 if DEBUG:
@@ -441,9 +311,9 @@ class Button:
         self.height = height  # La largeur
 
         if self.width != False and type(self.width) is not int:  # Si ce ne sont pas des int
-            raise ArgumentError("width must be integer", "width")
-        if self.height != False and type(self.heigth) is not int:
-            raise ArgumentError("height must be integer", "height")
+            raise pyframe.ArgumentError("width must be integer", "width")
+        if self.height != False and type(self.height) is not int:
+            raise pyframe.ArgumentError("height must be integer", "height")
 
         self.text = text  # Le texte à afficher
         if background_image == False:  # Si il n'y a pas d'image de fond
@@ -471,24 +341,35 @@ class Button:
 
         if self.width != False and self.height != False:
             if self.font != False:
-                self.text_rendered = render_text(self.x, self.y, self.text, vertical_centering=self.vertical_centering,
-                                                 horizontal_centering=self.horizontal_centering, scale=True,
-                                                 width=self.width, heigth=self.height, font=self.font,
-                                                 fontsize=self.fontsize, color=self.text_color, blit_to_window=False)
+                self.text_rendered = pyframe.utils.render_text(self.x, self.y, self.text,
+                                                               vertical_centering=self.vertical_centering,
+                                                               horizontal_centering=self.horizontal_centering,
+                                                               scale=True,
+                                                               width=self.width, heigth=self.height, font=self.font,
+                                                               fontsize=self.fontsize, color=self.text_color,
+                                                               blit_to_window=False)
             else:
-                self.text_rendered = render_text(self.x, self.y, self.text, vertical_centering=self.vertical_centering,
-                                                 horizontal_centering=self.horizontal_centering, scale=True,
-                                                 width=self.width, heigth=self.height, color=self.text_color,
-                                                 blit_to_window=False)
+                self.text_rendered = pyframe.utils.render_text(self.x, self.y, self.text,
+                                                               vertical_centering=self.vertical_centering,
+                                                               horizontal_centering=self.horizontal_centering,
+                                                               scale=True,
+                                                               width=self.width, height=self.height,
+                                                               color=self.text_color,
+                                                               blit_to_window=False)
         else:
             if self.font != False:
-                self.text_rendered = render_text(self.x, self.y, self.text, vertical_centering=self.vertical_centering,
-                                                 horizontal_centering=self.horizontal_centering, font=self.font,
-                                                 fontsize=self.fontsize, color=self.text_color, blit_to_window=False)
+                self.text_rendered = pyframe.utils.render_text(self.x, self.y, self.text,
+                                                               vertical_centering=self.vertical_centering,
+                                                               horizontal_centering=self.horizontal_centering,
+                                                               font=self.font,
+                                                               fontsize=self.fontsize, color=self.text_color,
+                                                               blit_to_window=False)
             else:
-                self.text_rendered = render_text(self.x, self.y, self.text, vertical_centering=self.vertical_centering,
-                                                 horizontal_centering=self.horizontal_centering, color=self.text_color,
-                                                 blit_to_window=False)
+                self.text_rendered = pyframe.utils.render_text(self.x, self.y, self.text,
+                                                               vertical_centering=self.vertical_centering,
+                                                               horizontal_centering=self.horizontal_centering,
+                                                               color=self.text_color,
+                                                               blit_to_window=False)
             self.width = self.text_rendered.get_width()
             self.height = self.text_rendered.get_height()
 
@@ -501,36 +382,41 @@ class Button:
 
         if self.horizontal_centering and self.vertical_centering:
             if self.width != False and self.height != False:
-                drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y - self.height / 2, self.width, self.height,
-                         color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y - self.height / 2, self.width,
+                                       self.height,
+                                       color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x - self.width / 2, self.y - self.height / 2))
             else:
-                drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y - self.height / 2, self.text_rendered.get_width(),
-                         self.text_rendered.get_height(), color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y - self.height / 2,
+                                       self.text_rendered.get_width(),
+                                       self.text_rendered.get_height(), color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x - self.width / 2, self.y - self.height / 2))
         elif self.vertical_centering and not self.horizontal_centering:
             if self.width != False and self.height != False:
-                drawRect(GLOBAL_WIN, self.x, self.y - self.height / 2, self.width, self.height, color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x, self.y - self.height / 2, self.width, self.height,
+                                       color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x, self.y - self.height / 2))
             else:
-                drawRect(GLOBAL_WIN, self.x, self.y - self.height / 2, self.text_rendered.get_width(),
-                         self.text_rendered.get_height(), color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x, self.y - self.height / 2, self.text_rendered.get_width(),
+                                       self.text_rendered.get_height(), color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x, self.y - self.height / 2))
         elif self.horizontal_centering and not self.vertical_centering:
             if self.width != False and self.height != False:
-                drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y, self.width, self.height, color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y, self.width, self.height,
+                                       color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x - self.width / 2, self.y))
             else:
-                drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y, self.text_rendered.get_width(),
-                         self.text_rendered.get_height(), color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x - self.width / 2, self.y, self.text_rendered.get_width(),
+                                       self.text_rendered.get_height(), color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x - self.width / 2, self.y))
         else:
             if self.width != False and self.height != False:
-                drawRect(GLOBAL_WIN, self.x, self.y, self.width, self.height, color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x, self.y, self.width, self.height, color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x, self.y))
             else:
-                drawRect(GLOBAL_WIN, self.x, self.y, self.text_rendered.get_width(), self.text_rendered.get_height(),
-                         color=used_color)
+                pyframe.utils.drawRect(GLOBAL_WIN, self.x, self.y, self.text_rendered.get_width(),
+                                       self.text_rendered.get_height(),
+                                       color=used_color)
                 GLOBAL_WIN.blit(self.text_rendered, (self.x, self.y))
 
         self.rendered_last_frame = True
@@ -543,8 +429,7 @@ class Button:
 
         if self.horizontal_centering and self.vertical_centering:
             if self.x - self.width / 2 <= LAST_MOUSE_POS[0] and self.x + self.width - self.width / 2 >= LAST_MOUSE_POS[
-                0] and self.y - self.height / 2 <= LAST_MOUSE_POS[1] and self.y + self.height - self.height / 2 >= \
-                    LAST_MOUSE_POS[1]:
+                0] and self.y - self.height / 2 <= LAST_MOUSE_POS[1] <= self.y + self.height - self.height / 2:
                 self.hovered = True
                 if LAST_MOUSE_STATES[0] == 1 and self.pressed == False:
                     self.pressed = True
@@ -554,7 +439,7 @@ class Button:
             return False
         elif self.horizontal_centering and not self.vertical_centering:
             if self.x - self.width / 2 <= LAST_MOUSE_POS[0] and self.x + self.width - self.width / 2 >= LAST_MOUSE_POS[
-                0] and self.y <= LAST_MOUSE_POS[1] and self.y + self.height >= LAST_MOUSE_POS[1]:
+                0] and self.y <= LAST_MOUSE_POS[1] <= self.y + self.height:
                 self.hovered = True
                 if LAST_MOUSE_STATES[0] == 1 and self.pressed == False:
                     self.pressed = True
@@ -612,28 +497,28 @@ class ProgressBar:
         """
 
         self.value = value;
-        verify_arg_type(self.value, "value", int)
+        pyframe.utils.verify_arg_type(self.value, "value", int)
         self.maximum = maximum;
-        verify_arg_type(self.maximum, "maximum", int)
+        pyframe.utils.verify_arg_type(self.maximum, "maximum", int)
         self.recompute_percentage();
-        verify_arg_type(self.percent, "percent", int)
+        pyframe.utils.verify_arg_type(self.percent, "percent", int)
         self.recompute_percentage_on_render = True
         self.window = window;
-        verify_arg_type(self.window, "window", pygame.Surface)
+        pyframe.utils.verify_arg_type(self.window, "window", pygame.Surface)
         self.background_color = background_color;
-        verify_arg_type(self.background_color, "background_color", tuple)
+        pyframe.utils.verify_arg_type(self.background_color, "background_color", tuple)
         self.progress_color = progress_color;
-        verify_arg_type(self.progress_color, "progress_color", tuple)
+        pyframe.utils.verify_arg_type(self.progress_color, "progress_color", tuple)
         self.padding = padding;
-        verify_arg_type(self.padding, "padding", int)
+        pyframe.utils.verify_arg_type(self.padding, "padding", int)
 
     def render(self):
         if self.recompute_percentage_on_render:
             self.recompute_percentage()
-        drawRect(self.window, self.x, self.y, self.width + self.padding * 2, self.height + self.padding * 2,
+        pyframe.utils.drawRect(self.window, self.x, self.y, self.width + self.padding * 2, self.height + self.padding * 2,
                  self.background_color)
         size = self.width / 100 * self.percent
-        drawRect(self.window, self.x + self.padding, self.y + self.padding, size, self.height, self.progress_color)
+        pyframe.utils.drawRect(self.window, self.x + self.padding, self.y + self.padding, size, self.height, self.progress_color)
 
 
 #############################################
@@ -700,7 +585,7 @@ class PyFrameSuperSprite:  # La classe de Lutin de base
                     hitbox.x -= step * DELTA_TIME  # Faire monter la hitbox
 
         else:  # Si ce n'est pas une direction valide
-            raise ArgumentError("Invalid direction", "direction")  # Lever une exception
+            raise pyframe.ArgumentError("Invalid direction", "direction")  # Lever une exception
 
     def bind(self, key, direction, step):  # Lier une touche à un mouvement
         found = False  # Est-ce que ce lien existe déjà
@@ -728,8 +613,8 @@ class PyFrameRectSprite(PyFrameSuperSprite):  # Le Lutin de rectangle, avec les 
 
     def render(self):  # Pour rendre le Lutin
         if self.centered_rendering:  # Pour un rendu centré
-            drawRect(self.window, self.x - self.width / 2, self.y - self.height / 2, self.width, self.height)
+            pyframe.utils.drawRect(self.window, self.x - self.width / 2, self.y - self.height / 2, self.width, self.height)
         else:  # Pour un rendu non centré
-            drawRect(self.window, self.x, self.y, self.width, self.height)
+            pyframe.utils.drawRect(self.window, self.x, self.y, self.width, self.height)
 
         super().render()  # Appeler le rendu du SuperSprite (À compléter si besoin)

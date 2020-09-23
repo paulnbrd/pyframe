@@ -1,4 +1,5 @@
 import pygame, random, time, pyframe
+
 pygame.font.init()
 pygame.init()
 WIN_WIDTH = 750
@@ -7,7 +8,7 @@ WIN_RUN = True
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 RENDER_EACH_FRAME = []
 pyframe.base.GLOBAL_WIN = WIN
-pyframe.base.set_framerate(60)
+pyframe.utils.set_framerate(60)
 pygame.display.set_caption("PyFrame Exemple")
 
 
@@ -49,8 +50,8 @@ menu_2_display = pyframe.base.Display([bouton_du_menu_2])
 #####
 
 while WIN_RUN :
-    pyframe.base.clear_screen()
-    pyframe.base.events_loop()
+    pyframe.utils.clear_screen()
+    pyframe.utils.events_loop()
     for event in pygame.event.get() :
         if event.type == pygame.QUIT :
             WIN_RUN = False
@@ -67,7 +68,7 @@ while WIN_RUN :
             sprite.render()
             sprite.move()
 
-    text = pyframe.base.render_text(WIN_WIDTH,WIN_HEIGHT,str(menu) + "-" +str(round(pyframe.CLOCK.get_fps())),blit_to_window=False)
+    text = pyframe.utils.render_text(WIN_WIDTH,WIN_HEIGHT,str(menu) + "-" +str(round(pyframe.base.CLOCK.get_fps())),blit_to_window=False)
     WIN.blit(text,(WIN_WIDTH-text.get_width(),WIN_HEIGHT-text.get_height()))
     pygame.display.flip()
 
