@@ -21,6 +21,7 @@ DELTA_TIME = ELAPSED / DELTA_TIME_DIVIDER * TIME_SPEED  # Le calcul du delta tim
 MOVE_BINDS = []  # Les binds des mouvements sont stockés ici
 HITBOXES = []
 BUTTONS = []  # Les boutons sont stockés ici
+ANIMATORS = []
 SPRITES = []  # Les sprites sont stockés ici
 PARTICLES_availableDirections = ["up", "down", "right", "left", "all"]  # Direction de particules autorisées
 PARTICLES_directionsAngle = {"up": (-90, 0), "down": (0, 90), "right": (-45, 45), "left": (45, -45)}
@@ -56,12 +57,48 @@ AZERTY_KEY_INDEXES = {
     "z": 119
 }
 
-local_dir = os.path.dirname(__file__)  # Le chemin vers le script éxecuté
+pathname = os.path.dirname(sys.argv[0])
+local_dir = os.path.abspath(pathname)+"\\" # Le chemin du script actuellement éxecuté
+os.chdir(local_dir)
 
 
 #############################################
 ############# =<|= Classes =|>= #############
 #############################################
+
+class Animator :
+    def load_images(self):
+        if not self.loaded :
+            images = self.images
+            self.images = []
+            for i in range(len(images)):
+                if os.path.isfile(images[i]):
+                    try:
+                        self.images.append(pygame.image.load(images[i]).convert_alpha())
+                    except pygame.error:
+                        if DEBUG:
+                            print("[pyframe][alert] L'image d'animateur '" + str(
+                                images[i]) + "' n'as pas pu être trouvée dans le chemin actuel (" + os.getcwd() + ")")
+                else:
+                    if DEBUG:
+                        print("[pyframe][alert] L'image d'animateur '" + str(
+                            images[i]) + "' n'as pas pu être trouvée dans le chemin actuel (" + os.getcwd() + ")")
+            self.loaded = True
+    def __init__(self,images,frame_duration,preload = True) :
+        self.images = images
+        self.frame_duration = frame_duration
+        self.elapsed_timeframe = 0
+        self.image_index = 0
+
+        self.loaded = False
+        if preload :
+            self.load_images()
+
+    def calculate_frame(self):
+        self.elapsed_timeframe += ELAPSED
+        if self.elapsed_timeframe >= self.frame_duration :
+            self.image_index += 1
+        return self.images[self.image_index]
 
 class Hitbox:
     """
