@@ -1,7 +1,25 @@
 import pygame, os, sys, pyframe, math, random, time
+from collections.abc import Sequence
+import numpy as np
+import sys,io
+
+tmp = sys.stdout
+sys.stdout = io.StringIO()
+import pymunk
+sys.stdout = tmp
+
 pygame.init()
 pygame.font.init()
 pygame.mixer.init()
+
+__all__ = [
+    "Particle",
+    "ParticleEmitter",
+    "IntervalEmitter",
+    "Graph",
+    "Button",
+    "Reflection"
+]
 
 class Particle:
     def __init__(
@@ -237,29 +255,29 @@ class IntervalEmitter:
 
     def __init__(
             self,
-            nb_init,  # Nombre de particules
-            interval,
-            x,  # Pos x
-            y,  # Pos y
-            surface,  # Surface ou rendre la particule
-            stay_in_window=False,  # Reste dans la fenêtre ? (Expérimental)
-            radius=2,
-            gravity=0.001,
-            color=(255, 0, 0),
-            start_velocity=0.7,
-            velocity_randomness=0.5,
-            air_resistance=0.999,
-            elasticity=0.750,
-            colliders=None,
-            lifetime=0,
-            reduce_radius_over_time=False,
-            reduce_each=None,
-            angle_borne_haute=math.pi * 2,
-            angle_borne_basse=0,
-            image=None,
-            image_base_scale=1,
-            image_blur=1
-    ):
+            nb_init: int,  # Nombre de particules
+            interval: int,
+            x: int,  # Pos x
+            y: int,  # Pos y
+            surface: pygame.surface.Surface,  # Surface ou rendre la particule
+            stay_in_window: bool = False,  # Reste dans la fenêtre ? (Expérimental)
+            radius: int = 2,
+            gravity: float = 0.001,
+            color: tuple = (255, 0, 0),
+            start_velocity: float = 0.7,
+            velocity_randomness: float = 0.5,
+            air_resistance: float = 0.999,
+            elasticity: float = 0.750,
+            colliders: Sequence[list, None] = None,
+            lifetime: int = 0,
+            reduce_radius_over_time: bool = False,
+            reduce_each: Sequence[None, int] = None,
+            angle_borne_haute: float = math.pi * 2,
+            angle_borne_basse: float = 0,
+            image: Sequence[pygame.surface.Surface, None] = None,
+            image_base_scale: float = 1,
+            image_blur: float = 1
+    ) -> None:
         self.nb = nb_init
         self.particles = []
 
@@ -286,7 +304,7 @@ class IntervalEmitter:
         self.interval = interval
         self.last_add = 0
 
-    def new_particle(self):
+    def new_particle(self) -> Particle:
         return Particle(
             x=self.x,
             y=self.y,
@@ -310,11 +328,11 @@ class IntervalEmitter:
             image_blur=self.blur
         )
 
-    def generate(self):
+    def generate(self) -> None:
         for i in range(self.nb):
             self.particles.append(self.new_particle())
 
-    def update(self, tick):
+    def update(self, tick) -> None:
         for p in self.particles:
             p.update(tick)
             if not p.alive():
@@ -326,7 +344,7 @@ class IntervalEmitter:
             self.particles.append(self.new_particle())
             self.last_add -= self.interval
 
-    def render(self):
+    def render(self) -> None:
         for p in self.particles:
             p.render()
 
@@ -342,90 +360,117 @@ class IntervalEmitter:
     Graphs
 """
 
-class Graph :
+
+# TODO : Optimiser
+# TODO : Changer le texte dans l'exemple __main__.py : il est noté que la classe n'est pas optimisée
+class Graph:
     """
         Permet de créer des graphiques
         avec pygame
     """
+
     def __init__(self,
-                 size = (500,200),
-                 font = pygame.font.SysFont("Arial",18),
-                 max_values = 1000,
-                 titre = ""
-    ) :
+                 size: tuple = (500, 200),
+                 font: pygame.font.Font = pygame.font.SysFont("Arial", 18),
+                 max_values: int = 1000,
+                 titre: str = "",
+                 fill_with = None
+                 ) -> None:
         """
             Permet de tracer un graphique (voir Graph.get_surface())
             :param size: La taille du graphique
             :param font: La police d'écriture du graphique
             :param max_values: Le nombre maximum de valeurs
+            :param fill_with: La valeur de base, le tableau de valeur sera rempli avec cette valeur
         """
-        self.surface = pygame.surface.Surface( size )
+        self.surface = pygame.surface.Surface(size)
         self.font = font
         self.titre = titre
 
         self.max_values = max_values
         self.values = []
-    def get_surface(self,size = None ) :
-        if size is None :
+        if fill_with is not None :
+            for i in range(self.max_values) :
+                self.values.append(fill_with)
+
+    def polish_values(self,nb:int = None) :
+        if len(self.values) > 3 :
+            if nb is None :
+                for i in range(1,len(self.values)-1) :
+                    self.values[i] = (self.values[i-1]+self.values[i+1])/2
+            else :
+                for i in range(len(self.values)-1-nb,len(self.values)-1) :
+                    self.values[i] = (self.values[i-1]+self.values[i+1])/2
+    def polish_last_value(self) :
+        if len(self.values) > 3 :
+            self.values[ len(self.values)-2 ] = (self.values[len(self.values)-3]+self.values[len(self.values)-1])/2
+
+    def get_surface(self, size:tuple[int,int]=None,auto_render:bool = False) -> pygame.surface.Surface:
+        if auto_render : self.render()
+        if size is None:
             size = self.surface.get_size()
-        surf = pygame.transform.scale( self.surface,size )
+        surf = pygame.transform.scale(self.surface, size)
         return surf
-    def add_value(self,new_value) :
+
+    def add_value(self, new_value) -> None:
         """
             Ajoute une nouvelle valeur à la liste des valeurs
         """
         assert type(new_value) is int or float
-        self.values.append( new_value )
-        if len(self.values) > self.max_values :
-            self.values.pop( 0 )
-    def render(self) :
-        self.surface.fill( (0,0,0) )
+        self.values.append(new_value)
+        while len(self.values) > self.max_values:
+            self.values.pop(0)
 
-        borne_haute = pyframe.functions.get_biggest( self.values )
+    def render(self) -> None:
+        self.surface.fill((0, 0, 0))
+
+        borne_haute = pyframe.functions.get_biggest(self.values)
         # borne_haute += borne_haute * 0.1
-        borne_basse = pyframe.functions.get_smallest( self.values )
+        borne_basse = pyframe.functions.get_smallest(self.values)
         # borne_basse += borne_basse * 0.1
         borne_haute -= borne_basse
 
         points = []
         h = self.surface.get_height()
 
-        for v in self.values :
-            try :
-                rapport = (v-borne_basse)/borne_haute
-                points.append( h-rapport*h )
-            except ZeroDivisionError :
+        for v in self.values:
+            try:
+                rapport = (v - borne_basse) / borne_haute
+                points.append(h - rapport * h)
+            except ZeroDivisionError:
                 pass
 
-        pygame.draw.line(self.surface,(255,255,255),(0,0),(0,self.surface.get_height()))
-        pygame.draw.line(self.surface,(255,255,255),(0,self.surface.get_height()-1),(self.surface.get_width(),self.surface.get_height()-1))
-        texte_borne_haute = self.font.render( str(round(borne_haute+borne_basse)),True,(255,255,255) )
-        self.surface.blit( texte_borne_haute,(2,0) )
+        pygame.draw.line(self.surface, (255, 255, 255), (0, 0), (0, self.surface.get_height()))
+        pygame.draw.line(self.surface, (255, 255, 255), (0, self.surface.get_height() - 1),
+                         (self.surface.get_width(), self.surface.get_height() - 1))
+        texte_borne_haute = self.font.render(str(round(borne_haute + borne_basse)), True, (255, 255, 255))
+        self.surface.blit(texte_borne_haute, (2, 0))
         texte_borne_basse = self.font.render(str(round(borne_basse)), True, (255, 255, 255))
-        self.surface.blit(texte_borne_basse, (2, h-texte_borne_basse.get_height()))
+        self.surface.blit(texte_borne_basse, (2, h - texte_borne_basse.get_height()))
         titre = self.font.render(str(self.titre), True, (255, 255, 255))
-        self.surface.blit( titre,(self.surface.get_width()-titre.get_width(),0) )
+        self.surface.blit(titre, (self.surface.get_width() - titre.get_width(), 0))
 
         w = self.surface.get_width()
-        if len(points) > 1 :
-            espace = w / (len(points)-1)
-            for p in range(len(points)-1) :
-                try :
+        if len(points) > 1:
+            espace = w / (len(points) - 1)
+            for p in range(len(points) - 1):
+                try:
                     pygame.draw.line(
                         self.surface,
-                        (255,0,0),
-                        (espace*p, points[p] ),
-                        (espace*(p+1), points[p+1])
+                        (255, 0, 0),
+                        (espace * p, points[p]),
+                        (espace * (p + 1), points[p + 1])
                     )
-                except :
+                except:
                     pass
-        elif len(points) == 1 :
+        elif len(points) == 1:
             pygame.draw.circle(
                 self.surface,
-                (255,0,0),
-                (0,points[0]),
+                (255, 0, 0),
+                (0, points[0]),
                 2
             )
+
 
 """
   ____  _    _ _______ _______ ____  _   _  _____ 
@@ -438,13 +483,176 @@ class Graph :
     Buttons                               
 """
 
-class Button ( pygame.sprite.Sprite ) :
+
+class Button(pygame.sprite.Sprite):
     """
         (C'est un pygame.sprite.Sprite parce que ce peut être utile)
     """
+
     def __init__(
             self,
-            text
-    ) :
+            text: str = "", # Le texte affiché sur le bouton
+            font:pygame.font.Font = pygame.font.SysFont("Arial",18),
+            padding:int = 5,
+            color: tuple[int,int,int] = (0,0,0), # La couleur du texte sur le bouton
+            background_color: tuple[int,int,int] = (255,255,255), # La couleur de fond
+            border_color: tuple[int,int,int] = (0,0,0), # Couleur de la bordure
+            border_size:int = 2, # Largeur (en px) de la bordure
+            hover_color: tuple[int,int,int] = (255,255,255), # La couleur du texte au survol
+            hover_background_color: tuple[int,int,int] = (0,0,0), # La couleur de fond au survol
+            hover_border_color: tuple[int,int,int] = (255,255,255), # La couleur de la bordure au survol
+            state:str = "normal",
+            surface: pygame.surface.Surface = None,
+            position: tuple[int,int] = None
+    ) -> None:
+        """
+            Créé un nouveau bouton, qui peut être intégré n'importe où ou presque
+        :param text: Le texte affiché sur le bouton
+        :param font: La police d'écriture avec laquelle rendre le texte
+        :param padding: Comme en CSS, la distance (en px) entre le cadre intérieur et le texte (la bordure du texte)
+        :param color: La couleur (format rgb) du texte lorsque le bouton est en state "normal"
+        :param background_color: La couleur (format rgb) du fond du bouton lorsque le bouton est en state "normal"
+        :param border_color: La couleur (format rgb) de la bordure
+        :param border_size: La taille de la bordure (en px)
+        :param hover_color: La couleur (format rgb) du texte lorsque le bouton est en state "hovered"
+        :param hover_background_color: La couleur (format rgb) de fond du bouton lorsque le bouton est en state "hovered"
+        :param hover_border_color: La couleur (format rgb) de la bordure lorsque le bouton est en state "hovered"
+        :param state: La state de base du bouton (attention à la méthode "render" qui met à jour automatiquement l'état du bouton si la valeur de son argument "change_states" est laissé à True)
+        :param surface: La surface sur laquelle rendre le bouton (optionnel, on peut passer par Button.surface après avoir appellé Button.update() pour obtenir la surface du bouton. Attention, si cet argument n'est pas renseigné, les méthodes "Button.is_clicked" et "Button.render" ne seront pas disponibles (soulèveront une exception RuntimeError).
+        :param position: Argument obligatoire si surface est renseigné. La position à laquelle blit le bouton sur la surface. Soulève une exception RuntimeError si cet argument est renseigné mais pas surface. Argument ignoré si surface n'est pas renseigné.
+        """
         super(Button, self).__init__()
         self.text = text
+        self.font = font
+        self.padding = padding
+        self.color = color
+        self.background_color = background_color
+        self.border_color = border_color
+        self.border_size = border_size
+        self.hover_color = hover_color
+        self.hover_background_color = hover_background_color
+        self.hover_border_color = hover_border_color
+        self.state = state
+
+        self.rerender_text() # Calculer les surfaces des textes
+
+        if surface is None :
+            self.can_render = False
+            self.regenerate_surface()
+        elif position is not None :
+            self.position = position
+            self.can_render = True
+            self.regenerate_surface()
+            self.surface_blit = surface
+        else :
+            raise RuntimeError("Position requise si vous spécifiez la surface")
+
+        ##>
+        self.last_call_clicked = False
+    def rerender_text(self) -> None :
+        self.rendered_text = self.font.render( str(self.text),True,self.color )
+        self.rendered_text_hover = self.font.render( str(self.text),True,self.hover_color )
+    def regenerate_surface(self) :
+        w = self.padding * 2 + self.border_size * 2 + self.rendered_text.get_width()
+        h = self.padding * 2 + self.border_size * 2 + self.rendered_text.get_height()
+        self.surface = pygame.surface.Surface((w, h))
+
+    def update(self) -> pygame.surface.Surface :
+        if self.state == "normal" :
+            self.surface.fill( self.border_color )
+            pygame.draw.rect( self.surface,self.background_color,(self.border_size,self.border_size,self.surface.get_width()-self.border_size*2,self.surface.get_height()-self.border_size*2) )
+            self.surface.blit( self.rendered_text,(self.border_size+self.padding,self.border_size+self.padding) )
+
+        elif self.state == "hovered" :
+            self.surface.fill( self.hover_border_color )
+            pygame.draw.rect( self.surface,self.hover_background_color,(self.border_size,self.border_size,self.surface.get_width()-self.border_size*2,self.surface.get_height()-self.border_size*2) )
+            self.surface.blit(self.rendered_text_hover, (self.border_size + self.padding, self.border_size + self.padding))
+
+        else :
+            raise RuntimeError("État du bouton \"{}\" inconnu.".format(self.state))
+
+        if self.can_render :
+            self.rect = self.surface.get_rect()
+            self.rect[0],self.rect[1] = self.position
+        return self.surface
+
+    def is_clicked(self,precomputed_pos:tuple[int,int] = None,mouse_clicked:bool = None,exceptions:bool = True) -> bool :
+        """
+        Retourne si le bouton est cliqué ou pas
+        :param precomputed_pos: Si pygame.mouse.get_pos() à déjà été appelé, mettre son retour ici (inutile d'appeller deux fois la même fonction)
+        :param mouse_clicked: Si pygame.mouse.get_pressed() à déjà été appelée, mettre ce que la fonction a retournée ici (inutile d'appeller deux fois la même fonction)
+        :return: True or False, respectivement cliqué et pas cliqué
+        """
+        if not self.can_render :
+            raise RuntimeError("Veuillez spécifier une surface sur laquelle rendre le bouton à son initialisation avec l'argument \"surface\" (et une position)")
+        if not hasattr(self,"rect") :
+            if exceptions :
+                raise RuntimeError("Vous devez update le bouton avant d'appeller cette fonction")
+            else :
+                return False
+        if precomputed_pos is not None :
+            pos = precomputed_pos
+        else :
+            pos = pygame.mouse.get_pos()
+        if mouse_clicked is None :
+            mouse_clicked = pygame.mouse.get_pressed()
+
+        if self.last_call_clicked and not mouse_clicked[0] :
+            self.last_call_clicked = False
+
+        if self.rect.collidepoint( pos ) and mouse_clicked[0] and not self.last_call_clicked :
+            self.last_call_clicked = True
+            return True
+        else :
+            return False
+
+    def update_state(self) :
+        mouse_pos = pygame.mouse.get_pos()  # Récupérer la position de la souris
+        if hasattr(self, "rect"):  # (Il faut que le bouton est déjà été update) Si le bouton a l'attribut rect
+            if self.rect.collidepoint(mouse_pos):  # Alors si la souris est dans le rectangle rendu
+                self.state = "hovered"  # Définir l'état comme "survolé"
+            else:  # Sinon
+                self.state = "normal"  # Définir l'état comme normal
+
+    def render(self,call_update = True,change_states = True) :
+        """
+        Permet de render le bouton sur la pygame.surface.Surface de self.surface !
+        :param call_update: La fonction doit update le bouton avant de le render ?
+        :param change_states: (Inutile si call_update = False) La fonction doit-elle changer l'état du bouton automatiquement ?
+        """
+        if not self.can_render : # Si aucune surface donnée ( self.can_render définie à l'__init__ de cet objet)
+            # Soulever une erreur
+            raise RuntimeError("Veuillez spécifier une surface sur laquelle rendre le bouton à son initialisation avec l'argument \"surface\" (et une position)")
+
+        # Si call_update c-à-d que la fonction doit update le bouton avant de le render
+        if call_update :
+            # Alors
+            # Si la fonction doit changer les états automatiquement
+            if change_states :
+                self.update_state()
+
+            self.update() # Update le bouton
+        ##>
+        self.surface_blit.blit(self.surface,self.position) # Blit le bouton sur la surface donnée
+
+
+class Reflection:
+    def __init__(
+            self,
+            sprite: pygame.sprite.Sprite = pygame.sprite.Sprite(),
+            blur: float = 5
+    ) -> None:
+        try:
+            assert isinstance(sprite, pygame.sprite.Sprite)
+        except AssertionError:
+            raise pyframe.exception.ArgumentError("Le sprite n'est pas un pygame.sprite.Sprite")
+        try:
+            assert hasattr(sprite, "image")
+        except AssertionError:
+            raise pyframe.exception.ArgumentError("Le sprite n'a pas d'attribut image")
+        self.sprite = sprite
+        self.reflection = pyframe.functions.blur_surf(self.sprite.image, blur)
+        self.reflection = pygame.transform.flip(self.reflection, False, True)
+
+    def get_image(self) -> pygame.surface.Surface:
+        return self.reflection
